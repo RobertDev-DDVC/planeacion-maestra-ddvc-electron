@@ -1,0 +1,42 @@
+{
+  "name": "planeacion-maestra-ddvc",
+  "version": "1.0.0",
+  "description": "",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "next dev",
+    "build": "next build",
+    "electron:dev": "cross-env NODE_ENV=development electron .",
+    "electron:build": "node build-electron.js"
+  },
+  "build": {
+    "appId": "com.planeacion-maestra-ddvc.app",
+    "productName": "Planeacion Maestra DDVC",
+    "files": [
+      "renderer/**/*",
+      "main.js",
+      "preload.js",
+      "package.json",
+      "node_modules/**/*"
+    ],
+    "win": {
+      "target": "nsis"
+    }
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.33.0",
+  "devDependencies": {
+    "cross-env": "^10.1.0",
+    "electron": "^41.2.0",
+    "electron-builder": "^26.8.1"
+  },
+  "dependencies": {
+    "next": "^16.0.7",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5"
+  }
+}
