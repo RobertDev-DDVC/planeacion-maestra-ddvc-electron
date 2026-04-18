@@ -36,7 +36,7 @@ function waitForServer(url, { timeout = 30000, interval = 500 } = {}) {
 }
 
 async function createWindow() {
-  let url = `http://localhost:${PORT}`
+  const url = `http://localhost:${PORT}`
 
   if (dev) {
     // Dev: esperar a que next dev (lanzado externamente) esté listo
@@ -64,8 +64,8 @@ async function createWindow() {
     }
   })
 
-  x.loadURL(url)
-}x
+  win.loadURL(url)
+}
 
 // ── IPC Handlers ──────────────────────────────────────────────
 
@@ -95,8 +95,14 @@ ipcMain.handle('log:write', async (_event, entry) => {
   const logsDir = path.join(appDataDir, 'logs')
   fs.mkdirSync(logsDir, { recursive: true })
   const today = new Date().toISOString().slice(0, 10)
-  const logFile = path.join(logsDir, `${today}.log`)
+  const fileName = `${today}.log`
+  const logFile = path.join(logsDir, fileName)
   fs.appendFileSync(logFile, JSON.stringify(entry) + '\n', 'utf-8')
+
+  return {
+    fileName,
+    content: fs.readFileSync(logFile, 'utf-8')
+  }
 })
 
 // ── App lifecycle ─────────────────────────────────────────────
