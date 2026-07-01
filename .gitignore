@@ -2,3 +2,5 @@
 /dist
 /.next
 /logs
+/renderer
+config.json
