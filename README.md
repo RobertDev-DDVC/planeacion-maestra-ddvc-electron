@@ -10,8 +10,8 @@ la app usa API routes, server actions y autenticación por sesión (`proxy.ts`).
   levanta el server standalone de Next (`renderer/server.js`) en `127.0.0.1:3000` y carga
   la ventana. Expone IPC para guardar Excel y escribir logs locales.
 - `preload.js` — puente seguro (`window.electronAPI`).
-- `build-electron.js` — compila `pm-next` con `output: 'standalone'` y copia los artefactos a
-  `renderer/`, luego empaqueta con electron-builder.
+- `build-electron.js` — compila `pm-next` con `output: 'standalone'`, copia los artefactos a
+  `renderer/`, genera `config.json` desde `pm-next/.env.local` y empaqueta con electron-builder.
 - `renderer/` — generado por el build (ignorado en git).
 
 ## Requisitos previos
@@ -50,18 +50,24 @@ Genera el instalador NSIS en `dist/`.
 
 ## Configuración de credenciales (producción)
 
-Las credenciales **no** se incluyen en el instalador. Tras instalar, coloca un archivo
-`config.json` en:
+Las credenciales quedan **embebidas en el instalador**: `build-electron.js` genera
+`config.json` a partir de `pm-next/.env.local` y electron-builder lo empaqueta (vía
+`extraResources`) en `resources/config.json`. El usuario final **no** tiene que copiar
+nada manualmente.
 
-```
-%APPDATA%\pm-ddvc\config.json
-```
+Antes de `pnpm electron:build`, asegúrate de que `pm-next/.env.local` tenga todas las
+credenciales requeridas (el build avisa si alguna clave queda vacía). Al abrir la app, si
+falta alguna variable obligatoria (p. ej. `SESSION_SECRET`), muestra un error.
 
-Usa `config.example.json` como plantilla y completa los valores (mismos que
-`pm-next/.env.local`). Si falta el archivo o `SESSION_SECRET`, la app muestra un error al abrir.
+**Override opcional:** si existe `%APPDATA%\pm-ddvc\config.json`, sus claves tienen prioridad
+sobre las empaquetadas (merge por clave). Útil para ajustar credenciales en una máquina
+concreta sin recompilar. Usa `config.example.json` como plantilla.
 
-Las credenciales son *service principals* con acceso a Dataverse/Dynamics/Fabric/OneDrive:
-trátalas como secretos y rótalas editando este `config.json` (no requiere recompilar).
+> ⚠️ **Seguridad:** con `asar: false`, el `config.json` embebido queda en **texto plano**
+> dentro del instalador y de la carpeta de instalación. Cualquiera con el `.exe` o acceso al
+> equipo puede leer los secretos (*service principals* de Dataverse/Dynamics/Fabric/OneDrive
+> y `SESSION_SECRET`). Trata el instalador como secreto: **distribución controlada**, no lo
+> subas a repos/nube públicos. Rota las credenciales periódicamente.
 
 ## Datos locales
 
