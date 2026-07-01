@@ -18,6 +18,9 @@
       "preload.js",
       "package.json"
     ],
+    "extraResources": [
+      { "from": "config.json", "to": "config.json" }
+    ],
     "win": {
       "target": "nsis"
     }
