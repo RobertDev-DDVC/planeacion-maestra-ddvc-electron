@@ -1,0 +1,4 @@
+# node_modules plano (sin symlinks del store .pnpm).
+# Requerido por electron-builder con pnpm: hace require dinámico de
+# app-builder-lib y con el linker 'isolated' no lo resuelve (MODULE_NOT_FOUND).
+nodeLinker: hoisted
