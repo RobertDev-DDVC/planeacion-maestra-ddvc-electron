@@ -53,33 +53,56 @@ const REQUIRED_CONFIG_KEYS = [
 ]
 
 /**
- * Carga las credenciales desde %APPDATA%/pm-ddvc/config.json hacia process.env
- * antes de levantar el server de Next. Devuelve { ok } o { ok:false, message }.
+ * Carga las credenciales hacia process.env antes de levantar el server de Next.
+ * Fuente de verdad: config.json empaquetado (extraResources -> process.resourcesPath),
+ * generado en el build desde pm-next/.env.local.
+ * Override opcional: %APPDATA%/pm-ddvc/config.json (merge por clave si existe), útil
+ * para ajustar credenciales por máquina sin recompilar.
+ * Devuelve { ok } o { ok:false, message }.
  */
 function loadConfigIntoEnv() {
-  const configPath = path.join(appDataDir, 'config.json')
-  if (!fs.existsSync(configPath)) {
+  const bundledPath = path.join(process.resourcesPath, 'config.json')
+  const overridePath = path.join(appDataDir, 'config.json')
+
+  function readJson(p) {
+    if (!fs.existsSync(p)) return null
+    try {
+      return JSON.parse(fs.readFileSync(p, 'utf-8'))
+    } catch (e) {
+      return { __error: `El archivo de configuración no es JSON válido:\n${p}\n\n${e.message}` }
+    }
+  }
+
+  const bundled = readJson(bundledPath)
+  const override = readJson(overridePath)
+  if (bundled && bundled.__error) return { ok: false, message: bundled.__error }
+  if (override && override.__error) return { ok: false, message: override.__error }
+
+  if (!bundled && !override) {
     return {
       ok: false,
       message:
-        `No se encontró el archivo de configuración:\n${configPath}\n\n` +
-        'Copia ahí "config.example.json" y completa las credenciales.',
+        `No se encontró configuración empaquetada:\n${bundledPath}\n\n` +
+        `Ni override en:\n${overridePath}`,
     }
   }
-  let raw
-  try {
-    raw = JSON.parse(fs.readFileSync(configPath, 'utf-8'))
-  } catch (e) {
-    return { ok: false, message: `El archivo de configuración no es JSON válido:\n${configPath}\n\n${e.message}` }
+
+  const merged = { ...(bundled || {}), ...(override || {}) } // override gana
+  for (const [key, value] of Object.entries(merged)) {
+    if (value !== null && value !== undefined && String(value) !== '') {
+      process.env[key] = String(value)
+    }
   }
-  for (const [key, value] of Object.entries(raw)) {
-    if (value !== null && value !== undefined) process.env[key] = String(value)
-  }
+
   const missing = REQUIRED_CONFIG_KEYS.filter((k) => !process.env[k])
   if (missing.length > 0) {
     return {
       ok: false,
-      message: `Faltan variables en ${configPath}:\n\n${missing.map((k) => `  • ${k}`).join('\n')}`,
+      message:
+        `Faltan variables de configuración:\n\n` +
+        missing.map((k) => `  • ${k}`).join('\n') +
+        `\n\nRevisadas: ${bundledPath}` +
+        (override ? ` (+ override ${overridePath})` : ''),
     }
   }
   return { ok: true }

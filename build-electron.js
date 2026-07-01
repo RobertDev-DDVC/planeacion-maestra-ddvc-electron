@@ -36,6 +36,47 @@ if (fs.existsSync(srcPublic)) {
   copyDir(srcPublic, path.join(rendererDir, 'public'))
 }
 
-// 5. Empaquetar con electron-builder
+// 5. Generar config.json desde pm-next/.env.local (se embebe vía extraResources)
+console.log('Generando config.json desde pm-next/.env.local...')
+const envLocalPath = path.join(pmNextDir, '.env.local')
+if (!fs.existsSync(envLocalPath)) {
+  throw new Error(`No se encontró ${envLocalPath}. Necesario para generar config.json.`)
+}
+
+function parseEnv(content) {
+  const out = {}
+  for (const line of content.split(/\r?\n/)) {
+    const t = line.trim()
+    if (!t || t.startsWith('#')) continue
+    const eq = t.indexOf('=')
+    if (eq === -1) continue
+    const key = t.slice(0, eq).trim()
+    let value = t.slice(eq + 1).trim()
+    if ((value.startsWith('"') && value.endsWith('"')) ||
+        (value.startsWith("'") && value.endsWith("'"))) {
+      value = value.slice(1, -1)
+    }
+    out[key] = value
+  }
+  return out
+}
+
+const envVars = parseEnv(fs.readFileSync(envLocalPath, 'utf-8'))
+// config.example.json define el esquema de claves a embeber (evita filtrar vars sueltas).
+const template = JSON.parse(fs.readFileSync(path.join(__dirname, 'config.example.json'), 'utf-8'))
+const config = {}
+const emptyKeys = []
+for (const key of Object.keys(template)) {
+  const value = envVars[key] ?? ''
+  config[key] = value
+  if (value === '') emptyKeys.push(key)
+}
+if (emptyKeys.length > 0) {
+  console.warn(`Advertencia: claves vacías en config.json generado: ${emptyKeys.join(', ')}`)
+}
+fs.writeFileSync(path.join(__dirname, 'config.json'), JSON.stringify(config, null, 2) + '\n')
+console.log('config.json generado.')
+
+// 6. Empaquetar con electron-builder
 console.log('Running electron-builder...')
 execSync('npx electron-builder', { cwd: __dirname, stdio: 'inherit' })
